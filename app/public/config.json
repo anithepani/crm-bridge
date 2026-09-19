@@ -1,5 +1,12 @@
 {
-  "staticHosting": true,
-  "canMintToken": false,
-  "widgetUrl": "https://api.fastn.dev/api/v1/embed/iframe?share=embshare_UjrRrlnXJ5U8F5uvgfyigPPxsoojcGMCfoK7OTY1HYI"
+  "apiBase": "",
+  "fastnHost": "https://api.fastn.dev",
+  "connectors": {
+    "salesforce": { "label": "Salesforce", "connectorId": "78a2b704-7689-42f1-aacf-379080b124a7" },
+    "zoho": { "label": "Zoho CRM", "connectorId": "d2eca9f4-8326-4a28-922c-22c7a7f421d9" }
+  },
+  "workflows": [
+    { "id": "wf_467e184300df", "key": "salesforceToZoho", "name": "Salesforce → Zoho CRM" },
+    { "id": "wf_d8e91b3cccdb", "key": "zohoToSalesforce", "name": "Zoho CRM → Salesforce" }
+  ]
 }

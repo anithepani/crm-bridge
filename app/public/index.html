@@ -31,10 +31,10 @@
       </nav>
       <div class="sidebar-foot">
         <div class="user">
-          <span class="avatar">A</span>
+          <span class="avatar" id="userAvatar">V</span>
           <div class="user-meta">
-            <strong>Aryan</strong>
-            <span>Admin</span>
+            <strong id="userName">Visitor</strong>
+            <span id="userRole">You</span>
           </div>
         </div>
       </div>
@@ -51,21 +51,19 @@
 
       <section class="view" id="view-dashboard">
         <div class="page-head">
-          <h1>Good afternoon, Aryan</h1>
-          <p class="muted">Here's what's happening across your revenue systems today.</p>
+          <h1>Welcome to Orbit CRM</h1>
+          <p class="muted">Connect your CRMs and Orbit keeps contacts in sync across them — live numbers below.</p>
         </div>
         <div class="kpis">
-          <div class="kpi"><span class="kpi-label">Contacts</span><span class="kpi-value">1,248</span><span class="kpi-delta up">▲ 4.1%</span></div>
-          <div class="kpi"><span class="kpi-label">Open deals</span><span class="kpi-value">86</span><span class="kpi-delta up">▲ 2.3%</span></div>
-          <div class="kpi"><span class="kpi-label">Synced today</span><span class="kpi-value" id="kpiSynced">—</span><span class="kpi-delta">via CRM Bridge</span></div>
-          <div class="kpi"><span class="kpi-label">Data health</span><span class="kpi-value good">Healthy</span><span class="kpi-delta">0 conflicts</span></div>
+          <div class="kpi"><span class="kpi-label">Syncs today</span><span class="kpi-value" id="kpiSynced">—</span><span class="kpi-delta">via CRM Bridge</span></div>
+          <div class="kpi"><span class="kpi-label">Created</span><span class="kpi-value" id="kpiCreated">—</span><span class="kpi-delta">new records</span></div>
+          <div class="kpi"><span class="kpi-label">Updated</span><span class="kpi-value" id="kpiUpdated">—</span><span class="kpi-delta">changed records</span></div>
+          <div class="kpi"><span class="kpi-label">Skipped</span><span class="kpi-value" id="kpiSkipped">—</span><span class="kpi-delta">already in sync</span></div>
         </div>
         <div class="panel">
-          <div class="panel-head"><h2>Recent activity</h2><span class="muted small">Last 24 hours</span></div>
+          <div class="panel-head"><h2>Recent activity</h2><span class="muted small">This workspace</span></div>
           <ul class="activity" id="activity">
-            <li><span class="dot ok"></span> Contact <strong>Rose Gonzalez</strong> synced to Zoho CRM <span class="muted small">· 2m ago</span></li>
-            <li><span class="dot ok"></span> Contact <strong>Event Test</strong> created in Salesforce <span class="muted small">· 14m ago</span></li>
-            <li><span class="dot ok"></span> Phone updated in Zoho CRM propagated to Salesforce <span class="muted small">· 1h ago</span></li>
+            <li class="muted small">Loading activity…</li>
           </ul>
         </div>
       </section>
@@ -73,14 +71,7 @@
       <section class="view" id="view-contacts" hidden>
         <div class="page-head"><h1>Contacts</h1><p class="muted">Records synced between your connected CRMs.</p></div>
         <div class="panel">
-          <table class="table">
-            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Source</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td>Rose Gonzalez</td><td>rose@edge.com</td><td>(512) 757-6000</td><td>Salesforce</td><td><span class="pill ok">Synced</span></td></tr>
-              <tr><td>Ahmed Ali</td><td>ahmed@test.com</td><td>03001234567</td><td>Zoho CRM</td><td><span class="pill ok">Synced</span></td></tr>
-              <tr><td>Event Test</td><td>event.test@example.com</td><td>—</td><td>Salesforce</td><td><span class="pill ok">Synced</span></td></tr>
-            </tbody>
-          </table>
+          <p class="muted">No contacts to show yet. Connect Salesforce and Zoho CRM on the Integrations page — your synced contacts will appear here, visible only to you.</p>
         </div>
       </section>
 

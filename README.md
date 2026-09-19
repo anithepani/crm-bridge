@@ -120,10 +120,12 @@ This is the part that makes the sync safe to leave running.
    - Schedule `*/5 * * * *` routed to `sync-zoho-contact-to-salesforce`.
 4. **Customer** — `Settings -> Customers -> Create customer` (`CRM Bridge Demo`).
 5. **Widget** — `Widgets -> INTEGRATIONS -> + Add`, pick Salesforce and Zoho CRM,
-   scope **User level**, name it `Connect your CRMs`, then **Save & publish**. Take the
-   **Shareable link** (or the **Iframe** snippet) from the **Embed** tab, scoped to the
-   demo customer.
-6. **Customer experience** — open the widget, click **Connect** next to each CRM, sign in
+   set the integration **Scope to User level** (this is what isolates each visitor's
+   connections), name it `Connect your CRMs`, then **Save & publish**. Do **not** hand out
+   a Shareable link: the host app mints a short-lived, per-visitor token instead.
+6. **Customer experience** — Orbit CRM mints a fresh embed token for each visitor
+   (`POST /api/embed-token`), so every visitor connects their **own** Salesforce and Zoho
+   CRM accounts and sees only their own state. Click **Connect** next to each CRM, sign in
    once, approve. The status dots turn **Connected** and the Insights tab shows sync
    activity.
 
@@ -133,17 +135,23 @@ Track 01 requires a *"Connect your CRMs" page inside your app*. Fastn's widget a
 the panel; Orbit CRM is the host product that embeds it.
 
 ```
+api/                 serverless API (Vercel Node functions) - holds the API key
+  _lib.js            shared Fastn client + CORS + token minting
+  config.js          non-secret runtime config for the browser
+  embed-token.js     POST => per-visitor, customer-scoped embed token
+  status.js          GET  => real, customer-scoped connections + KPIs
 app/
-  server.js        Node server, no dependencies (node:http). Serves the app and mints
-                   embed tokens server-side so the Fastn API key never reaches the browser.
+  server.js          local dev server; delegates to the same api/ handlers
   public/
-    index.html     app shell (sidebar, topbar, views)
-    styles.css     modern UI, light/dark
-    app.js         navigation + connector cards + widget mount
-  start.ps1        Windows launcher (sets the customer + widget URL, runs the server)
+    index.html       app shell (sidebar, topbar, views)
+    styles.css       modern UI, light/dark
+    app.js           navigation + visitor identity + widget mount
+    config.json      non-secret runtime config (apiBase, fastnHost, connectors)
+  start.ps1          Windows launcher (reads FASTN_API_KEY from your user env)
+vercel.json          serverless function config
 ```
 
-Run it:
+Run it locally:
 
 ```powershell
 powershell -File app\start.ps1
@@ -154,9 +162,12 @@ The Integrations page shows Salesforce and Zoho CRM cards with **Connect** butto
 status dots, and embeds the Fastn hub below them. A real customer clicks Connect, signs
 in, and approves — the whole connection flow, inside the product, with no coding.
 
-The token path (`GET /api/embed-token` → Fastn `POST /api/v1/embed/token`) is implemented
-and used when `FASTN_HOST` + `FASTN_API_KEY` are set; otherwise the app mounts a Fastn
-**shareable widget link**. Either way the customer sees the same hub.
+**Multi-tenancy.** There is no shared widget link anywhere. On first visit the browser
+creates an anonymous visitor id; `POST /api/embed-token` passes it as `userEmail`/`userName`
+to Fastn `POST /api/v1/embed/token` and returns a short-lived token scoped to the customer.
+The iframe mounts with `?tenant-id=<endOrgId>&token=…`, so each visitor's connections are
+user-level and isolated, and the status API reads only that customer's data — never the
+owner's personal workspace.
 
 ## GitHub Pages deployment
 
@@ -165,12 +176,21 @@ and **/ (root)**. The root `index.html` opens the Orbit CRM app in `app/public/`
 relative asset URLs work under the `/crm-bridge/` project path. `.nojekyll` keeps
 Pages from processing the repository as a Jekyll documentation site.
 
-On static hosting, the app falls back to `app/public/config.json`, which contains
-the same public Fastn shareable widget link used by `app/start.ps1`. Connection
-status is available inside the embedded hub. GitHub Pages cannot run
-`app/server.js`, mint embed tokens, or provide the server's live status API.
-For those features, run the Node server on a Node-capable host. Never put a
-Fastn API key in the static configuration.
+GitHub Pages serves only the static UI. The API lives in `api/` and deploys to a
+serverless host (Vercel is pre-configured via `vercel.json`):
+
+1. Deploy the repo to Vercel and set these environment variables:
+   - `FASTN_API_KEY` — a Fastn API key scoped to the demo customer (no `decrypt`, no secret read)
+   - `FASTN_END_ORG_ID` — the customer UUID the widget is scoped to
+   - `FASTN_ORG_ID` — optional, only for a customer-pinned key
+   - `ALLOWED_ORIGINS` — optional; defaults to `https://anithepani.github.io` + localhost
+2. Put the deployed origin in `app/public/config.json` → `"apiBase": "https://<your-app>.vercel.app"`.
+3. In the Fastn **Embed** tab, **revoke** any old shareable link and create the API key
+   under **Settings → API keys** (Customers it can reach = the demo customer).
+
+The API key never reaches the browser: the browser only receives a short-lived `emb_…`
+token. If `apiBase` is empty or the API is unreachable, the app shows an explicit
+"Embed unavailable" notice rather than falling back to any shared link.
 
 ## MCP — the agent surface
 
