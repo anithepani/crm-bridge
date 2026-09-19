@@ -6,6 +6,7 @@ const {
   json,
   preflight,
   normalizeList,
+  fastnGet,
   fastnGetStatus,
 } = require("./_lib.js");
 
@@ -52,7 +53,10 @@ module.exports = async function handler(req, res) {
     connectors[key] = { label: def.label, connected: false, status: "unknown" };
   }
 
-  const connResult = await fastnGetStatus("/api/v1/connections");
+  // Connections must come from the customer-pinned embed key: it resolves the
+  // embed customer's own connections. The every-customer status key returns the
+  // workspace's connections instead.
+  const connResult = await fastnGet("/api/v1/connections");
   if (!connResult.ok) {
     return json(res, 200, {
       available: false,
