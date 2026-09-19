@@ -131,6 +131,16 @@ module.exports = async function handler(req, res) {
       distinctKeys: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
       executionsStatus: execResult.status,
       executionsFetched: execResult.ok ? normalizeList(execResult.parsed).length : 0,
+      execShape: (() => {
+        const p = execResult.parsed;
+        return {
+          top: Array.isArray(p) ? "array" : typeof p,
+          keys: p && typeof p === "object" && !Array.isArray(p) ? Object.keys(p).slice(0, 15) : [],
+          dataType: p && !Array.isArray(p) ? (Array.isArray(p.data) ? "array" : typeof p.data) : null,
+          dataKeys: p && p.data && !Array.isArray(p.data) ? Object.keys(p.data).slice(0, 15) : [],
+          total: p && !Array.isArray(p) ? p.total ?? p.count ?? null : null,
+        };
+      })(),
       execProbe,
     },
   });
