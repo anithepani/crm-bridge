@@ -1,8 +1,6 @@
 "use strict";
 
 const {
-  FASTN_API_KEY,
-  FASTN_STATUS_API_KEY,
   FASTN_END_ORG_ID,
   applyCors,
   json,
@@ -130,13 +128,5 @@ module.exports = async function handler(req, res) {
     connectors,
     kpis,
     activity,
-    diagnostics: {
-      embedKey: Boolean(FASTN_API_KEY),
-      statusKey: Boolean(FASTN_STATUS_API_KEY),
-      distinctKeys: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
-      workflowStatuses: wfResults.map((r) => r.status),
-      executionsFetched: executions.length,
-      executionsScoped: usable.length,
-    },
   });
 };
