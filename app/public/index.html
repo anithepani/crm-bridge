@@ -71,13 +71,20 @@
       <section class="view" id="view-contacts" hidden>
         <div class="page-head"><h1>Contacts</h1><p class="muted">Records synced between your connected CRMs.</p></div>
         <div class="panel">
-          <p class="muted">No contacts to show yet. Connect Salesforce and Zoho CRM on the Integrations page — your synced contacts will appear here, visible only to you.</p>
+          <table class="table">
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Source</th><th>Status</th></tr></thead>
+            <tbody id="contactsBody">
+              <tr><td colspan="5" class="muted">Loading synced contacts…</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
       <section class="view" id="view-deals" hidden>
         <div class="page-head"><h1>Deals</h1><p class="muted">Pipeline overview.</p></div>
-        <div class="panel"><p class="muted">No deals to show in this demo. Connect a CRM to import your pipeline.</p></div>
+        <div class="panel">
+          <p class="muted">CRM Bridge syncs <strong>Contacts</strong> (First Name, Last Name, Email, Phone). Deals and pipeline objects are out of scope for this integration.</p>
+        </div>
       </section>
 
       <section class="view" id="view-integrations" hidden>

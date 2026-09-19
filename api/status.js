@@ -66,21 +66,27 @@ module.exports = async function handler(req, res) {
 
   const allConnections = normalizeList(connResult.parsed);
   const connections = allConnections.filter((c) => c.endOrgId === FASTN_END_ORG_ID);
-  let connectedCount = 0;
-  for (const conn of connections) {
-    for (const [key, def] of Object.entries(CONNECTORS)) {
-      if (conn.connectorId !== def.connectorId) continue;
-      if (String(conn.status || "").toUpperCase() === "ACTIVE") {
-        connectedCount += 1;
-        connectors[key] = {
-          label: def.label,
-          connected: true,
-          status: "active",
-          verified: conn.verifyStatus ? String(conn.verifyStatus).toUpperCase() === "VERIFIED" : null,
-        };
-      }
-    }
+
+  // One connector can have several connection records (workspace-level and
+  // customer-level). Count distinct connectors, not rows.
+  for (const [key, def] of Object.entries(CONNECTORS)) {
+    const matches = connections.filter(
+      (c) => c.connectorId === def.connectorId && String(c.status || "").toUpperCase() === "ACTIVE"
+    );
+    if (!matches.length) continue;
+    const best = matches.find((c) => c.verifyStatus) || matches[0];
+    const verified = best.verifyStatus ? String(best.verifyStatus).toUpperCase() === "VERIFIED" : null;
+    const account = best.userEmail || best.userName || null;
+    connectors[key] = {
+      label: def.label,
+      connected: true,
+      status: "active",
+      verified,
+      account,
+      instances: matches.length,
+    };
   }
+  const connectedCount = Object.values(connectors).filter((c) => c.connected).length;
 
   // Merge executions from every workflow.
   const executions = [];
@@ -107,19 +113,42 @@ module.exports = async function handler(req, res) {
     skipped: todays.filter((e) => statusOf(e) === "skipped").length,
   };
 
-  const activity = usable
+  const byNewest = usable
     .slice()
-    .sort((a, b) => Date.parse(b.createdAt || b.startedAt || 0) - Date.parse(a.createdAt || a.startedAt || 0))
-    .slice(0, 5)
-    .map((e) => {
-      const rec = (e.input && e.input.record) || {};
-      return {
-        status: statusOf(e) || String(e.status || "").toLowerCase(),
-        workflow: e.workflowName || "Sync",
-        contact: rec.Name || null,
-        at: e.completedAt || e.createdAt || e.startedAt || null,
-      };
+    .sort((a, b) => Date.parse(b.createdAt || b.startedAt || 0) - Date.parse(a.createdAt || a.startedAt || 0));
+
+  const activity = byNewest.slice(0, 5).map((e) => {
+    const rec = (e.input && e.input.record) || (e.input && e.input.Email ? e.input : {});
+    return {
+      status: statusOf(e) || String(e.status || "").toLowerCase(),
+      workflow: e.workflowName || "Sync",
+      contact: rec.Name || [rec.FirstName, rec.LastName].filter(Boolean).join(" ") || null,
+      at: e.completedAt || e.createdAt || e.startedAt || null,
+    };
+  });
+
+  // Real synced records, harvested from the contact payloads the workflows ran
+  // on. Deduplicated by email, newest first.
+  const contacts = [];
+  const seen = new Set();
+  for (const e of byNewest) {
+    const rec = (e.input && e.input.record) || (e.input && e.input.Email ? e.input : null);
+    if (!rec) continue;
+    const email = String(rec.Email || "").trim().toLowerCase();
+    const name = rec.Name || [rec.FirstName || rec.First_Name, rec.LastName || rec.Last_Name].filter(Boolean).join(" ");
+    if (!name && !email) continue;
+    const key = email || name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    contacts.push({
+      name: name || "—",
+      email: email || "—",
+      phone: rec.Phone || "—",
+      source: e.workflowName || "Sync",
+      status: statusOf(e) || "synced",
     });
+    if (contacts.length >= 25) break;
+  }
 
   return json(res, 200, {
     available: true,
@@ -128,5 +157,6 @@ module.exports = async function handler(req, res) {
     connectors,
     kpis,
     activity,
+    contacts,
   });
 };

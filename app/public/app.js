@@ -29,6 +29,7 @@ const els = {
   kpiUpdated: document.getElementById("kpiUpdated"),
   kpiSkipped: document.getElementById("kpiSkipped"),
   activity: document.getElementById("activity"),
+  contactsBody: document.getElementById("contactsBody"),
   workflowLinks: document.getElementById("workflowLinks"),
   userName: document.getElementById("userName"),
   userRole: document.getElementById("userRole"),
@@ -176,6 +177,38 @@ function renderKpis(kpis, connectedCount) {
   paint(els.kpiSkipped, kpis.skipped);
 }
 
+function renderContacts(contacts) {
+  if (!els.contactsBody) return;
+  const rows = Array.isArray(contacts) ? contacts : [];
+  els.contactsBody.innerHTML = "";
+  if (!rows.length) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 5;
+    td.className = "muted";
+    td.textContent =
+      "No synced contacts yet. Create or update a contact in a connected CRM and it will appear here.";
+    tr.appendChild(td);
+    els.contactsBody.appendChild(tr);
+    return;
+  }
+  rows.forEach((c) => {
+    const tr = document.createElement("tr");
+    [c.name, c.email, c.phone, c.source].forEach((value) => {
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    const statusTd = document.createElement("td");
+    const pill = document.createElement("span");
+    pill.className = "pill ok";
+    pill.textContent = c.status;
+    statusTd.appendChild(pill);
+    tr.appendChild(statusTd);
+    els.contactsBody.appendChild(tr);
+  });
+}
+
 function renderActivity(activity) {
   if (!els.activity) return;
   const items = Array.isArray(activity) ? activity : [];
@@ -222,7 +255,8 @@ async function refreshStatus() {
     if (!document.getElementById(`state-${id}`)) return;
     if (conn.connected) {
       const verified = conn.verified === false ? " (unverified)" : "";
-      setConnectorState(id, `Connected${verified}`, "connected");
+      const account = conn.account ? ` · ${conn.account}` : "";
+      setConnectorState(id, `Connected${verified}${account}`, "connected");
     } else if (conn.status && conn.status !== "unknown") {
       setConnectorState(id, `Not connected — ${String(conn.status).toLowerCase()}`, "unknown");
     } else {
@@ -232,6 +266,7 @@ async function refreshStatus() {
 
   renderKpis(data.kpis, data.connectedCount);
   renderActivity(data.activity);
+  renderContacts(data.contacts);
 }
 
 function startStatusPolling() {
