@@ -85,7 +85,7 @@ function normalizeList(parsed) {
   return [];
 }
 
-function fastnHeaders(key, extra) {
+function fastnHeaders(key, extra, opts) {
   const headers = {
     Authorization: `Bearer ${key}`,
     Accept: "application/json",
@@ -93,16 +93,18 @@ function fastnHeaders(key, extra) {
   };
   // A test key is refused without this header; a live key does not need it.
   if (/^fsk_test_/.test(key)) headers["X-fastn-Test-Mode"] = "true";
-  if (FASTN_ORG_ID) headers["x-org-id"] = FASTN_ORG_ID;
+  // x-org-id is not sent on token minting: a customer-pinned key takes the
+  // customer in the request body instead.
+  if (FASTN_ORG_ID && !(opts && opts.skipOrg)) headers["x-org-id"] = FASTN_ORG_ID;
   return headers;
 }
 
-async function fastnRequestWithKey(key, method, pathname, body) {
+async function fastnRequestWithKey(key, method, pathname, body, opts) {
   if (!key) return { ok: false, status: 0, error: "No Fastn API key is configured" };
   try {
     const resp = await fetch(`${FASTN_HOST}${pathname}`, {
       method,
-      headers: fastnHeaders(key, body ? { "Content-Type": "application/json" } : undefined),
+      headers: fastnHeaders(key, body ? { "Content-Type": "application/json" } : undefined, opts),
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await resp.text();
@@ -142,7 +144,7 @@ async function mintEmbedToken(userEmail, userName) {
   if (userEmail) body.userEmail = userEmail;
   if (userName) body.userName = userName;
 
-  const result = await fastnRequest("POST", "/api/v1/embed/token", body);
+  const result = await fastnRequestWithKey(FASTN_API_KEY, "POST", "/api/v1/embed/token", body, { skipOrg: true });
   if (!result.ok) {
     return {
       ok: false,
