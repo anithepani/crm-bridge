@@ -23,6 +23,7 @@ const els = {
   widgetFrame: document.getElementById("widgetFrame"),
   widgetLoading: document.getElementById("widgetLoading"),
   embedNotice: document.getElementById("embedNotice"),
+  kpiConnected: document.getElementById("kpiConnected"),
   kpiSynced: document.getElementById("kpiSynced"),
   kpiCreated: document.getElementById("kpiCreated"),
   kpiUpdated: document.getElementById("kpiUpdated"),
@@ -163,11 +164,12 @@ function setConnectorState(id, label, dotState) {
   if (btn) btn.classList.toggle("ghost", dotState === "connected");
 }
 
-function renderKpis(kpis) {
-  if (!kpis) return;
+function renderKpis(kpis, connectedCount) {
   const paint = (el, value) => {
     if (el) el.textContent = value === null || value === undefined ? "—" : String(value);
   };
+  paint(els.kpiConnected, connectedCount);
+  if (!kpis) return;
   paint(els.kpiSynced, kpis.syncsToday);
   paint(els.kpiCreated, kpis.created);
   paint(els.kpiUpdated, kpis.updated);
@@ -228,7 +230,7 @@ async function refreshStatus() {
     }
   });
 
-  renderKpis(data.kpis);
+  renderKpis(data.kpis, data.connectedCount);
   renderActivity(data.activity);
 }
 
