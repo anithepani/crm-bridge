@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbit CRM</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%234f46e5' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%234f46e5'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">Orbit<span>CRM</span></span>
+      </div>
+      <nav class="nav" id="nav">
+        <a class="nav-item" data-view="dashboard" href="#dashboard">
+          <span class="nav-ico">▦</span> Dashboard
+        </a>
+        <a class="nav-item" data-view="contacts" href="#contacts">
+          <span class="nav-ico">◍</span> Contacts
+        </a>
+        <a class="nav-item" data-view="deals" href="#deals">
+          <span class="nav-ico">◈</span> Deals
+        </a>
+        <div class="nav-label">Settings</div>
+        <a class="nav-item" data-view="integrations" href="#integrations">
+          <span class="nav-ico">⇄</span> Integrations
+        </a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user">
+          <span class="avatar">A</span>
+          <div class="user-meta">
+            <strong>Aryan</strong>
+            <span>Admin</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumbs" id="crumbs">Dashboard</div>
+        <div class="top-actions">
+          <div class="search"><span>⌕</span><input placeholder="Search contacts, deals…" /></div>
+          <button class="icon-btn" id="themeBtn" title="Toggle theme">◐</button>
+        </div>
+      </header>
+
+      <section class="view" id="view-dashboard">
+        <div class="page-head">
+          <h1>Good afternoon, Aryan</h1>
+          <p class="muted">Here's what's happening across your revenue systems today.</p>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span class="kpi-label">Contacts</span><span class="kpi-value">1,248</span><span class="kpi-delta up">▲ 4.1%</span></div>
+          <div class="kpi"><span class="kpi-label">Open deals</span><span class="kpi-value">86</span><span class="kpi-delta up">▲ 2.3%</span></div>
+          <div class="kpi"><span class="kpi-label">Synced today</span><span class="kpi-value" id="kpiSynced">—</span><span class="kpi-delta">via CRM Bridge</span></div>
+          <div class="kpi"><span class="kpi-label">Data health</span><span class="kpi-value good">Healthy</span><span class="kpi-delta">0 conflicts</span></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Recent activity</h2><span class="muted small">Last 24 hours</span></div>
+          <ul class="activity" id="activity">
+            <li><span class="dot ok"></span> Contact <strong>Rose Gonzalez</strong> synced to Zoho CRM <span class="muted small">· 2m ago</span></li>
+            <li><span class="dot ok"></span> Contact <strong>Event Test</strong> created in Salesforce <span class="muted small">· 14m ago</span></li>
+            <li><span class="dot ok"></span> Phone updated in Zoho CRM propagated to Salesforce <span class="muted small">· 1h ago</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="view" id="view-contacts" hidden>
+        <div class="page-head"><h1>Contacts</h1><p class="muted">Records synced between your connected CRMs.</p></div>
+        <div class="panel">
+          <table class="table">
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Source</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Rose Gonzalez</td><td>rose@edge.com</td><td>(512) 757-6000</td><td>Salesforce</td><td><span class="pill ok">Synced</span></td></tr>
+              <tr><td>Ahmed Ali</td><td>ahmed@test.com</td><td>03001234567</td><td>Zoho CRM</td><td><span class="pill ok">Synced</span></td></tr>
+              <tr><td>Event Test</td><td>event.test@example.com</td><td>—</td><td>Salesforce</td><td><span class="pill ok">Synced</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="view" id="view-deals" hidden>
+        <div class="page-head"><h1>Deals</h1><p class="muted">Pipeline overview.</p></div>
+        <div class="panel"><p class="muted">No deals to show in this demo. Connect a CRM to import your pipeline.</p></div>
+      </section>
+
+      <section class="view" id="view-integrations" hidden>
+        <div class="page-head">
+          <h1>Connect your CRMs</h1>
+          <p class="muted">Link your CRM accounts once and Orbit keeps contacts in sync across them — no exports, no manual copying.</p>
+        </div>
+
+        <div class="cards">
+          <div class="conn-card" id="card-salesforce">
+            <div class="conn-top">
+              <span class="conn-logo sf">SF</span>
+              <div class="conn-id"><strong>Salesforce</strong><span class="muted small">CRM · source &amp; target</span></div>
+              <span class="status-dot" id="dot-salesforce" data-state="unknown"></span>
+            </div>
+            <div class="conn-bottom">
+              <span class="conn-state" id="state-salesforce">Checking…</span>
+              <button class="btn" data-connect="salesforce">Connect</button>
+            </div>
+          </div>
+
+          <div class="conn-card" id="card-zoho">
+            <div class="conn-top">
+              <span class="conn-logo zoho">Z</span>
+              <div class="conn-id"><strong>Zoho CRM</strong><span class="muted small">CRM · source &amp; target</span></div>
+              <span class="status-dot" id="dot-zoho" data-state="unknown"></span>
+            </div>
+            <div class="conn-bottom">
+              <span class="conn-state" id="state-zoho">Checking…</span>
+              <button class="btn" data-connect="zoho">Connect</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="links" id="workflowLinks" hidden></div>
+
+        <div class="notice" id="embedNotice" hidden></div>
+
+        <div class="panel widget-panel">
+          <div class="panel-head">
+            <h2>Integration hub</h2>
+            <span class="muted small">Powered by Fastn</span>
+          </div>
+          <div class="widget-frame" id="widgetFrame">
+            <div class="widget-loading" id="widgetLoading">Loading integration hub…</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
