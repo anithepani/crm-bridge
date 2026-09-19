@@ -90,6 +90,7 @@ function fastnHeaders(key, extra, opts) {
     Authorization: `Bearer ${key}`,
     Accept: "application/json",
     ...(extra || {}),
+    ...((opts && opts.headers) || {}),
   };
   // A test key is refused without this header; a live key does not need it.
   if (/^fsk_test_/.test(key)) headers["X-fastn-Test-Mode"] = "true";

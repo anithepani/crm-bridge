@@ -75,7 +75,16 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const execResult = await fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true });
+  // The executions endpoint appears to require a customer context; try the
+  // workspace org and the embed customer as x-end-org-id, then plain.
+  const [execWs, execCust, execPlain] = await Promise.all([
+    fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true, headers: { "x-end-org-id": WORKSPACE_ORG_ID } }),
+    fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true, headers: { "x-end-org-id": FASTN_END_ORG_ID } }),
+    fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true }),
+  ]);
+  const execResult = [execWs, execCust, execPlain].find((r) => r.ok && normalizeList(r.parsed).length > 0) || execWs;
+  const execProbe = { ws: execWs.status, cust: execCust.status, plain: execPlain.status };
+
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
 
@@ -122,6 +131,7 @@ module.exports = async function handler(req, res) {
       distinctKeys: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
       executionsStatus: execResult.status,
       executionsFetched: execResult.ok ? normalizeList(execResult.parsed).length : 0,
+      execProbe,
     },
   });
 };
