@@ -90,14 +90,26 @@ module.exports = async function handler(req, res) {
   }
 
   // Executions are the honest source for "what has synced".
-  const [execResult, wfProbe, evProbe, connProbe, execByWf, execPlain] = await Promise.all([
+  const INSIGHT_PATHS = [
+    "/api/v1/insights",
+    "/api/v1/insights?range=7d",
+    "/api/v1/analytics",
+    "/api/v1/sync-reports",
+    "/api/v1/executions/summary",
+    "/api/v1/widgets/wgt_51274a7388e8/insights",
+  ];
+  const [execResult, wfProbe, evProbe, connProbe, execPlain, ...insightResults] = await Promise.all([
     fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true }),
     fastnGetStatus("/api/v1/workflows", { skipOrg: true }),
     fastnGetStatus("/api/v1/events", { skipOrg: true }),
     fastnGetStatus("/api/v1/connections", { skipOrg: true }),
-    fastnGetStatus("/api/v1/executions?workflowId=wf_467e184300df&limit=10", { skipOrg: true }),
     fastnGetStatus("/api/v1/executions", { skipOrg: true }),
+    ...INSIGHT_PATHS.map((p) => fastnGetStatus(p, { skipOrg: true })),
   ]);
+  const insightProbe = {};
+  INSIGHT_PATHS.forEach((p, i) => {
+    insightProbe[p] = insightResults[i] ? insightResults[i].status : 0;
+  });
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
   let diagnostics = {
@@ -121,8 +133,8 @@ module.exports = async function handler(req, res) {
       workflows: wfProbe.status,
       events: evProbe.status,
       connections: connProbe.status,
-      executionsByWorkflow: execByWf.status,
       executionsPlain: execPlain.status,
+      insights: insightProbe,
     },
   };
 
@@ -175,8 +187,8 @@ module.exports = async function handler(req, res) {
         workflows: wfProbe.status,
         events: evProbe.status,
         connections: connProbe.status,
-        executionsByWorkflow: execByWf.status,
         executionsPlain: execPlain.status,
+        insights: insightProbe,
       },
     };
   }
