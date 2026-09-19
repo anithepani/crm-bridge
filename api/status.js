@@ -85,6 +85,25 @@ module.exports = async function handler(req, res) {
   const execResult = [execWs, execCust, execPlain].find((r) => r.ok && normalizeList(r.parsed).length > 0) || execWs;
   const execProbe = { ws: execWs.status, cust: execCust.status, plain: execPlain.status };
 
+  const EXEC_PATHS = [
+    "/api/v1/executions?workflowId=wf_467e184300df",
+    "/api/v1/executions?endOrgId=" + WORKSPACE_ORG_ID,
+    "/api/v1/workflows/wf_467e184300df/executions",
+    "/api/v1/workflows/wf_467e184300df",
+    "/api/v1/executions?limit=50&offset=0",
+  ];
+  const execPathResults = await Promise.all(EXEC_PATHS.map((p) => fastnGetStatus(p, { skipOrg: true })));
+  const execPaths = {};
+  EXEC_PATHS.forEach((p, i) => {
+    const r = execPathResults[i];
+    const parsed = r.parsed;
+    execPaths[p] = {
+      status: r.status,
+      count: r.ok ? normalizeList(parsed).length : null,
+      keys: parsed && !Array.isArray(parsed) ? Object.keys(parsed).slice(0, 8) : Array.isArray(parsed) ? "array" : typeof parsed,
+    };
+  });
+
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
 
@@ -142,6 +161,7 @@ module.exports = async function handler(req, res) {
         };
       })(),
       execProbe,
+      execPaths,
     },
   });
 };
