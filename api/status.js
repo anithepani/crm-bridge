@@ -110,6 +110,18 @@ module.exports = async function handler(req, res) {
   INSIGHT_PATHS.forEach((p, i) => {
     insightProbe[p] = insightResults[i] ? insightResults[i].status : 0;
   });
+
+  // Shape discovery for the workflow/event sources the status key CAN read.
+  const wfList = normalizeList(wfProbe.parsed);
+  const evList = normalizeList(evProbe.parsed);
+  const sourceInfo = {
+    workflowCount: wfList.length,
+    workflowKeys: wfList[0] ? Object.keys(wfList[0]) : [],
+    workflowSample: wfList.slice(0, 2),
+    eventCount: evList.length,
+    eventKeys: evList[0] ? Object.keys(evList[0]) : [],
+    eventSample: evList.slice(0, 2),
+  };
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
   let diagnostics = {
@@ -136,6 +148,7 @@ module.exports = async function handler(req, res) {
       executionsPlain: execPlain.status,
       insights: insightProbe,
     },
+    sourceInfo,
   };
 
   if (execResult.ok) {
@@ -190,6 +203,7 @@ module.exports = async function handler(req, res) {
         executionsPlain: execPlain.status,
         insights: insightProbe,
       },
+      sourceInfo,
     };
   }
 
