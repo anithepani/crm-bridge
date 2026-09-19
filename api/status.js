@@ -1,6 +1,8 @@
 "use strict";
 
 const {
+  FASTN_API_KEY,
+  FASTN_STATUS_API_KEY,
   FASTN_END_ORG_ID,
   applyCors,
   json,
@@ -9,6 +11,8 @@ const {
   fastnGet,
   fastnGetStatus,
 } = require("./_lib.js");
+
+const VERSION = "status-v3";
 
 /*
  * GET /api/status
@@ -89,6 +93,14 @@ module.exports = async function handler(req, res) {
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
   let diagnostics = {
+    version: VERSION,
+    keys: {
+      embed: Boolean(FASTN_API_KEY),
+      status: Boolean(FASTN_STATUS_API_KEY),
+      distinct: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
+    },
+    connectionsOk: connResult.ok,
+    connectionsStatus: connResult.status,
     executionsOk: execResult.ok,
     executionsStatus: execResult.status,
     executionsError: execResult.ok ? null : execResult.error || (execResult.parsed && (execResult.parsed.message || execResult.parsed.error)) || null,
@@ -127,6 +139,14 @@ module.exports = async function handler(req, res) {
         };
       });
     diagnostics = {
+      version: VERSION,
+      keys: {
+        embed: Boolean(FASTN_API_KEY),
+        status: Boolean(FASTN_STATUS_API_KEY),
+        distinct: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
+      },
+      connectionsOk: connResult.ok,
+      connectionsStatus: connResult.status,
       executionsOk: true,
       executionsStatus: execResult.status,
       executionsError: null,
