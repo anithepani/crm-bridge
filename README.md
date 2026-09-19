@@ -158,6 +158,20 @@ The token path (`GET /api/embed-token` → Fastn `POST /api/v1/embed/token`) is 
 and used when `FASTN_HOST` + `FASTN_API_KEY` are set; otherwise the app mounts a Fastn
 **shareable widget link**. Either way the customer sees the same hub.
 
+## GitHub Pages deployment
+
+In repository **Settings → Pages**, select **Deploy from a branch**, then **main**
+and **/ (root)**. The root `index.html` opens the Orbit CRM app in `app/public/`;
+relative asset URLs work under the `/crm-bridge/` project path. `.nojekyll` keeps
+Pages from processing the repository as a Jekyll documentation site.
+
+On static hosting, the app falls back to `app/public/config.json`, which contains
+the same public Fastn shareable widget link used by `app/start.ps1`. Connection
+status is available inside the embedded hub. GitHub Pages cannot run
+`app/server.js`, mint embed tokens, or provide the server's live status API.
+For those features, run the Node server on a Node-capable host. Never put a
+Fastn API key in the static configuration.
+
 ## MCP — the agent surface
 
 Fastn's product MCP gateway exposes the workspace's connectors as tools to an AI client.

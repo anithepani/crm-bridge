@@ -43,7 +43,7 @@ function setView(name) {
 
   if (name === "integrations") {
     ensureWidget();
-    startStatusPolling();
+    if (state.config) startStatusPolling();
   } else {
     stopStatusPolling();
   }
@@ -87,9 +87,10 @@ function setConnectorState(id, label, dotState) {
  * app show "Connected" without the browser ever holding a credential.
  */
 async function refreshConnectorStatus() {
+  if (!state.config || state.config.staticHosting) return;
   let data = null;
   try {
-    data = await (await fetch("/api/status")).json();
+    data = await (await fetch("api/status")).json();
   } catch {
     return;
   }
@@ -111,6 +112,7 @@ async function refreshConnectorStatus() {
 }
 
 function startStatusPolling() {
+  if (!state.config || state.config.staticHosting || els.views.integrations.hidden) return;
   if (state.statusTimer) return;
   refreshConnectorStatus();
   state.statusTimer = setInterval(refreshConnectorStatus, 5000);
@@ -124,6 +126,7 @@ function stopStatusPolling() {
 }
 
 function pulseStatus() {
+  if (!state.config || state.config.staticHosting) return;
   refreshConnectorStatus();
   if (state.fastTimer) clearInterval(state.fastTimer);
   let ticks = 0;
@@ -140,7 +143,7 @@ function initConnectors() {
   document.querySelectorAll("[data-connect]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.connect;
-      setConnectorState(id, "Connecting — finish sign-in in the hub below", "pending");
+      setConnectorState(id, "Finish sign-in and check status in the hub below", "pending");
       els.widgetFrame.scrollIntoView({ behavior: "smooth", block: "center" });
       pulseStatus();
     });
@@ -187,9 +190,17 @@ async function ensureWidget() {
 
   if (!state.config) {
     try {
-      state.config = await (await fetch("/api/config")).json();
+      const response = await fetch("api/config");
+      if (!response.ok) throw new Error("Server configuration unavailable");
+      state.config = await response.json();
     } catch {
-      state.config = {};
+      try {
+        const response = await fetch("./config.json");
+        if (!response.ok) throw new Error("Static configuration unavailable");
+        state.config = await response.json();
+      } catch {
+        state.config = { staticHosting: true };
+      }
     }
   }
 
@@ -205,7 +216,7 @@ async function ensureWidget() {
   // Otherwise mint a customer-scoped embed token server-side.
   if (state.config.canMintToken) {
     try {
-      const res = await fetch("/api/embed-token");
+      const res = await fetch("api/embed-token");
       const data = await res.json();
       if (data.ok && data.token) {
         const src = `${state.config.fastnHost}/api/v1/embed/iframe?token=${encodeURIComponent(data.token)}`;
@@ -234,6 +245,9 @@ function mountIframe(src) {
 function markReady() {
   setConnectorState("salesforce", "Connect in the hub below", "unknown");
   setConnectorState("zoho", "Connect in the hub below", "unknown");
+  if (state.config.staticHosting) {
+    renderNotice("Connect your accounts and check their live connection status in the integration hub below.");
+  }
   startStatusPolling();
 }
 
@@ -250,13 +264,7 @@ function showEmbedFallback() {
     `<div class="widget-loading">Embed unavailable. Configure ${hostHint} and reload.</div>`;
 }
 
-async function initActivity() {
-  // Lightweight liveliness so the dashboard doesn't look static during a demo.
-  try {
-    await fetch("/api/health");
-  } catch {
-    /* ignore */
-  }
+function initActivity() {
   if (els.kpiSynced) els.kpiSynced.textContent = "12";
 }
 
