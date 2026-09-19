@@ -129,8 +129,8 @@ function fastnGet(pathname) {
 }
 
 // Reads for /api/status use the status key when one is configured.
-function fastnGetStatus(pathname) {
-  return fastnRequestWithKey(FASTN_STATUS_API_KEY, "GET", pathname);
+function fastnGetStatus(pathname, opts) {
+  return fastnRequestWithKey(FASTN_STATUS_API_KEY, "GET", pathname, undefined, opts);
 }
 
 /*

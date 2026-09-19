@@ -3,6 +3,7 @@
 const {
   FASTN_API_KEY,
   FASTN_STATUS_API_KEY,
+  FASTN_ORG_ID,
   FASTN_END_ORG_ID,
   applyCors,
   json,
@@ -89,7 +90,7 @@ module.exports = async function handler(req, res) {
   }
 
   // Executions are the honest source for "what has synced".
-  const execResult = await fastnGetStatus("/api/v1/executions?limit=100");
+  const execResult = await fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true });
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
   let diagnostics = {
@@ -98,6 +99,7 @@ module.exports = async function handler(req, res) {
       embed: Boolean(FASTN_API_KEY),
       status: Boolean(FASTN_STATUS_API_KEY),
       distinct: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
+      orgHeaderConfigured: Boolean(FASTN_ORG_ID),
     },
     connectionsOk: connResult.ok,
     connectionsStatus: connResult.status,
@@ -144,6 +146,7 @@ module.exports = async function handler(req, res) {
         embed: Boolean(FASTN_API_KEY),
         status: Boolean(FASTN_STATUS_API_KEY),
         distinct: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
+        orgHeaderConfigured: Boolean(FASTN_ORG_ID),
       },
       connectionsOk: connResult.ok,
       connectionsStatus: connResult.status,
