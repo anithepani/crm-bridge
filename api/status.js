@@ -90,10 +90,13 @@ module.exports = async function handler(req, res) {
   }
 
   // Executions are the honest source for "what has synced".
-  const [execResult, wfProbe, evProbe] = await Promise.all([
+  const [execResult, wfProbe, evProbe, connProbe, execByWf, execPlain] = await Promise.all([
     fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true }),
     fastnGetStatus("/api/v1/workflows", { skipOrg: true }),
     fastnGetStatus("/api/v1/events", { skipOrg: true }),
+    fastnGetStatus("/api/v1/connections", { skipOrg: true }),
+    fastnGetStatus("/api/v1/executions?workflowId=wf_467e184300df&limit=10", { skipOrg: true }),
+    fastnGetStatus("/api/v1/executions", { skipOrg: true }),
   ]);
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
@@ -114,7 +117,13 @@ module.exports = async function handler(req, res) {
     executionsMatched: 0,
     executionOrgs: [],
     connectionsFetched: allConnections.length,
-    probe: { workflows: wfProbe.status, events: evProbe.status },
+    probe: {
+      workflows: wfProbe.status,
+      events: evProbe.status,
+      connections: connProbe.status,
+      executionsByWorkflow: execByWf.status,
+      executionsPlain: execPlain.status,
+    },
   };
 
   if (execResult.ok) {
@@ -162,7 +171,13 @@ module.exports = async function handler(req, res) {
       executionsMatched: scoped.length,
       executionOrgs: [...new Set(all.map((e) => e.endOrgId).filter(Boolean))],
       connectionsFetched: allConnections.length,
-      probe: { workflows: wfProbe.status, events: evProbe.status },
+      probe: {
+        workflows: wfProbe.status,
+        events: evProbe.status,
+        connections: connProbe.status,
+        executionsByWorkflow: execByWf.status,
+        executionsPlain: execPlain.status,
+      },
     };
   }
 
