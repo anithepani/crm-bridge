@@ -19,6 +19,10 @@
 
 const FASTN_HOST = (process.env.FASTN_HOST || "https://api.fastn.dev").replace(/\/+$/, "");
 const FASTN_API_KEY = process.env.FASTN_API_KEY || "";
+// Optional separate read-only key used by /api/status. The embed key is pinned
+// to one customer; a key scoped to "Every customer" can read the workspace's
+// execution history. Falls back to FASTN_API_KEY when unset.
+const FASTN_STATUS_API_KEY = process.env.FASTN_STATUS_API_KEY || FASTN_API_KEY;
 const FASTN_ORG_ID = process.env.FASTN_ORG_ID || "";
 // The embed customer (end-org) UUID. Not a secret; defaults to the CRM Bridge
 // Demo customer so only FASTN_API_KEY must be configured on the host.
@@ -81,24 +85,24 @@ function normalizeList(parsed) {
   return [];
 }
 
-function fastnHeaders(extra) {
+function fastnHeaders(key, extra) {
   const headers = {
-    Authorization: `Bearer ${FASTN_API_KEY}`,
+    Authorization: `Bearer ${key}`,
     Accept: "application/json",
     ...(extra || {}),
   };
   // A test key is refused without this header; a live key does not need it.
-  if (/^fsk_test_/.test(FASTN_API_KEY)) headers["X-fastn-Test-Mode"] = "true";
+  if (/^fsk_test_/.test(key)) headers["X-fastn-Test-Mode"] = "true";
   if (FASTN_ORG_ID) headers["x-org-id"] = FASTN_ORG_ID;
   return headers;
 }
 
-async function fastnRequest(method, pathname, body) {
-  if (!FASTN_API_KEY) return { ok: false, status: 0, error: "FASTN_API_KEY is not configured" };
+async function fastnRequestWithKey(key, method, pathname, body) {
+  if (!key) return { ok: false, status: 0, error: "No Fastn API key is configured" };
   try {
     const resp = await fetch(`${FASTN_HOST}${pathname}`, {
       method,
-      headers: fastnHeaders(body ? { "Content-Type": "application/json" } : undefined),
+      headers: fastnHeaders(key, body ? { "Content-Type": "application/json" } : undefined),
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await resp.text();
@@ -114,8 +118,17 @@ async function fastnRequest(method, pathname, body) {
   }
 }
 
+function fastnRequest(method, pathname, body) {
+  return fastnRequestWithKey(FASTN_API_KEY, method, pathname, body);
+}
+
 function fastnGet(pathname) {
   return fastnRequest("GET", pathname);
+}
+
+// Reads for /api/status use the status key when one is configured.
+function fastnGetStatus(pathname) {
+  return fastnRequestWithKey(FASTN_STATUS_API_KEY, "GET", pathname);
 }
 
 /*
@@ -147,6 +160,7 @@ async function mintEmbedToken(userEmail, userName) {
 module.exports = {
   FASTN_HOST,
   FASTN_API_KEY,
+  FASTN_STATUS_API_KEY,
   FASTN_ORG_ID,
   FASTN_END_ORG_ID,
   ALLOWED_ORIGINS,
@@ -156,5 +170,6 @@ module.exports = {
   readBody,
   normalizeList,
   fastnGet,
+  fastnGetStatus,
   mintEmbedToken,
 };

@@ -6,7 +6,7 @@ const {
   json,
   preflight,
   normalizeList,
-  fastnGet,
+  fastnGetStatus,
 } = require("./_lib.js");
 
 /*
@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
     connectors[key] = { label: def.label, connected: false, status: "unknown" };
   }
 
-  const connResult = await fastnGet("/api/v1/connections");
+  const connResult = await fastnGetStatus("/api/v1/connections");
   if (!connResult.ok) {
     return json(res, 200, {
       available: false,
@@ -81,10 +81,18 @@ module.exports = async function handler(req, res) {
   }
 
   // Executions are the honest source for "what has synced".
-  const execResult = await fastnGet("/api/v1/executions?limit=100");
+  const execResult = await fastnGetStatus("/api/v1/executions?limit=100");
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
-  let diagnostics = { executionsFetched: 0, executionsMatched: 0, executionOrgs: [], connectionsFetched: allConnections.length };
+  let diagnostics = {
+    executionsOk: execResult.ok,
+    executionsStatus: execResult.status,
+    executionsError: execResult.ok ? null : execResult.error || (execResult.parsed && (execResult.parsed.message || execResult.parsed.error)) || null,
+    executionsFetched: 0,
+    executionsMatched: 0,
+    executionOrgs: [],
+    connectionsFetched: allConnections.length,
+  };
 
   if (execResult.ok) {
     const all = normalizeList(execResult.parsed);
@@ -115,6 +123,9 @@ module.exports = async function handler(req, res) {
         };
       });
     diagnostics = {
+      executionsOk: true,
+      executionsStatus: execResult.status,
+      executionsError: null,
       executionsFetched: all.length,
       executionsMatched: scoped.length,
       executionOrgs: [...new Set(all.map((e) => e.endOrgId).filter(Boolean))],
