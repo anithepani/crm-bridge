@@ -3,7 +3,6 @@
 const {
   FASTN_API_KEY,
   FASTN_STATUS_API_KEY,
-  FASTN_ORG_ID,
   FASTN_END_ORG_ID,
   applyCors,
   json,
@@ -13,18 +12,12 @@ const {
   fastnGetStatus,
 } = require("./_lib.js");
 
-const VERSION = "status-v3";
-
 /*
  * GET /api/status
  *
- * Reads real Fastn state. Connections are scoped to the embed customer
- * (FASTN_END_ORG_ID). Executions are scoped to the embed customer OR the
- * workspace org: for this single-workspace demo the sync workflows are owned by
- * the workspace (personal) org, so that is where their executions land.
- *
- * If the platform cannot be reached the response is { available: false } and the
- * UI degrades to neutral states rather than inventing numbers.
+ * Connections come from the customer-pinned embed key (the embed customer's own
+ * connections). Executions come from the every-customer status key, scoped to
+ * the embed customer OR the workspace org (where this demo's sync runs land).
  */
 
 const CONNECTORS = {
@@ -32,10 +25,7 @@ const CONNECTORS = {
   zoho: { label: "Zoho CRM", connectorId: "d2eca9f4-8326-4a28-922c-22c7a7f421d9" },
 };
 
-// The org that owns the sync workflows/triggers. For this demo it is the
-// workspace org; override with FASTN_WORKSPACE_ORG_ID if it ever changes.
 const WORKSPACE_ORG_ID = process.env.FASTN_WORKSPACE_ORG_ID || "personal_3c15292b6ae5e0d20385";
-
 const STATS_ORG_IDS = new Set([FASTN_END_ORG_ID, WORKSPACE_ORG_ID].filter(Boolean));
 
 function startOfTodayUtc() {
@@ -58,9 +48,6 @@ module.exports = async function handler(req, res) {
     connectors[key] = { label: def.label, connected: false, status: "unknown" };
   }
 
-  // Connections must come from the customer-pinned embed key: it resolves the
-  // embed customer's own connections. The every-customer status key returns the
-  // workspace's connections instead.
   const connResult = await fastnGet("/api/v1/connections");
   if (!connResult.ok) {
     return json(res, 200, {
@@ -76,8 +63,7 @@ module.exports = async function handler(req, res) {
   for (const conn of connections) {
     for (const [key, def] of Object.entries(CONNECTORS)) {
       if (conn.connectorId !== def.connectorId) continue;
-      const active = String(conn.status || "").toUpperCase() === "ACTIVE";
-      if (active) {
+      if (String(conn.status || "").toUpperCase() === "ACTIVE") {
         connectedCount += 1;
         connectors[key] = {
           label: def.label,
@@ -89,67 +75,9 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Executions are the honest source for "what has synced".
-  const INSIGHT_PATHS = [
-    "/api/v1/insights",
-    "/api/v1/insights?range=7d",
-    "/api/v1/analytics",
-    "/api/v1/sync-reports",
-    "/api/v1/executions/summary",
-    "/api/v1/widgets/wgt_51274a7388e8/insights",
-  ];
-  const [execResult, wfProbe, evProbe, connProbe, execPlain, ...insightResults] = await Promise.all([
-    fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true }),
-    fastnGetStatus("/api/v1/workflows", { skipOrg: true }),
-    fastnGetStatus("/api/v1/events", { skipOrg: true }),
-    fastnGetStatus("/api/v1/connections", { skipOrg: true }),
-    fastnGetStatus("/api/v1/executions", { skipOrg: true }),
-    ...INSIGHT_PATHS.map((p) => fastnGetStatus(p, { skipOrg: true })),
-  ]);
-  const insightProbe = {};
-  INSIGHT_PATHS.forEach((p, i) => {
-    insightProbe[p] = insightResults[i] ? insightResults[i].status : 0;
-  });
-
-  // Shape discovery for the workflow/event sources the status key CAN read.
-  const wfList = normalizeList(wfProbe.parsed);
-  const evList = normalizeList(evProbe.parsed);
-  const sourceInfo = {
-    workflowCount: wfList.length,
-    workflowKeys: wfList[0] ? Object.keys(wfList[0]) : [],
-    workflowSample: wfList.slice(0, 2),
-    eventCount: evList.length,
-    eventKeys: evList[0] ? Object.keys(evList[0]) : [],
-    eventSample: evList.slice(0, 2),
-  };
+  const execResult = await fastnGetStatus("/api/v1/executions?limit=100", { skipOrg: true });
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
-  let diagnostics = {
-    version: VERSION,
-    keys: {
-      embed: Boolean(FASTN_API_KEY),
-      status: Boolean(FASTN_STATUS_API_KEY),
-      distinct: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
-      orgHeaderConfigured: Boolean(FASTN_ORG_ID),
-    },
-    connectionsOk: connResult.ok,
-    connectionsStatus: connResult.status,
-    executionsOk: execResult.ok,
-    executionsStatus: execResult.status,
-    executionsError: execResult.ok ? null : execResult.error || (execResult.parsed && (execResult.parsed.message || execResult.parsed.error)) || null,
-    executionsFetched: 0,
-    executionsMatched: 0,
-    executionOrgs: [],
-    connectionsFetched: allConnections.length,
-    probe: {
-      workflows: wfProbe.status,
-      events: evProbe.status,
-      connections: connProbe.status,
-      executionsPlain: execPlain.status,
-      insights: insightProbe,
-    },
-    sourceInfo,
-  };
 
   if (execResult.ok) {
     const all = normalizeList(execResult.parsed);
@@ -179,32 +107,6 @@ module.exports = async function handler(req, res) {
           at: e.completedAt || e.createdAt || e.startedAt || null,
         };
       });
-    diagnostics = {
-      version: VERSION,
-      keys: {
-        embed: Boolean(FASTN_API_KEY),
-        status: Boolean(FASTN_STATUS_API_KEY),
-        distinct: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
-        orgHeaderConfigured: Boolean(FASTN_ORG_ID),
-      },
-      connectionsOk: connResult.ok,
-      connectionsStatus: connResult.status,
-      executionsOk: true,
-      executionsStatus: execResult.status,
-      executionsError: null,
-      executionsFetched: all.length,
-      executionsMatched: scoped.length,
-      executionOrgs: [...new Set(all.map((e) => e.endOrgId).filter(Boolean))],
-      connectionsFetched: allConnections.length,
-      probe: {
-        workflows: wfProbe.status,
-        events: evProbe.status,
-        connections: connProbe.status,
-        executionsPlain: execPlain.status,
-        insights: insightProbe,
-      },
-      sourceInfo,
-    };
   }
 
   return json(res, 200, {
@@ -214,6 +116,12 @@ module.exports = async function handler(req, res) {
     connectors,
     kpis,
     activity,
-    diagnostics,
+    diagnostics: {
+      embedKey: Boolean(FASTN_API_KEY),
+      statusKey: Boolean(FASTN_STATUS_API_KEY),
+      distinctKeys: FASTN_STATUS_API_KEY !== FASTN_API_KEY,
+      executionsStatus: execResult.status,
+      executionsFetched: execResult.ok ? normalizeList(execResult.parsed).length : 0,
+    },
   });
 };
