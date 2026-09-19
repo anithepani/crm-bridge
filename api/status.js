@@ -12,18 +12,25 @@ const {
 /*
  * GET /api/status
  *
- * Reads real Fastn state, scoped to the embed customer (FASTN_END_ORG_ID) ONLY.
- * The owner's personal-org connections and executions are never returned, which
- * is what stops a visitor from seeing the owner's statistics.
+ * Reads real Fastn state. Connections are scoped to the embed customer
+ * (FASTN_END_ORG_ID). Executions are scoped to the embed customer OR the
+ * workspace org: for this single-workspace demo the sync workflows are owned by
+ * the workspace (personal) org, so that is where their executions land.
  *
- * If the platform cannot be reached the response is { available: false } and
- * the UI degrades to neutral states rather than inventing numbers.
+ * If the platform cannot be reached the response is { available: false } and the
+ * UI degrades to neutral states rather than inventing numbers.
  */
 
 const CONNECTORS = {
   salesforce: { label: "Salesforce", connectorId: "78a2b704-7689-42f1-aacf-379080b124a7" },
   zoho: { label: "Zoho CRM", connectorId: "d2eca9f4-8326-4a28-922c-22c7a7f421d9" },
 };
+
+// The org that owns the sync workflows/triggers. For this demo it is the
+// workspace org; override with FASTN_WORKSPACE_ORG_ID if it ever changes.
+const WORKSPACE_ORG_ID = process.env.FASTN_WORKSPACE_ORG_ID || "personal_3c15292b6ae5e0d20385";
+
+const STATS_ORG_IDS = new Set([FASTN_END_ORG_ID, WORKSPACE_ORG_ID].filter(Boolean));
 
 function startOfTodayUtc() {
   const now = new Date();
@@ -54,7 +61,8 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const connections = normalizeList(connResult.parsed).filter((c) => c.endOrgId === FASTN_END_ORG_ID);
+  const allConnections = normalizeList(connResult.parsed);
+  const connections = allConnections.filter((c) => c.endOrgId === FASTN_END_ORG_ID);
   let connectedCount = 0;
   for (const conn of connections) {
     for (const [key, def] of Object.entries(CONNECTORS)) {
@@ -72,15 +80,16 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Executions are the honest source for "what has synced". Scope to the embed
-  // customer only; a row without a matching endOrgId is ignored.
+  // Executions are the honest source for "what has synced".
   const execResult = await fastnGet("/api/v1/executions?limit=100");
   let kpis = { syncsToday: null, created: null, updated: null, skipped: null };
   let activity = [];
+  let diagnostics = { executionsFetched: 0, executionsMatched: 0, executionOrgs: [], connectionsFetched: allConnections.length };
 
   if (execResult.ok) {
+    const all = normalizeList(execResult.parsed);
+    const scoped = all.filter((e) => STATS_ORG_IDS.has(e.endOrgId));
     const today = startOfTodayUtc();
-    const scoped = normalizeList(execResult.parsed).filter((e) => e.endOrgId === FASTN_END_ORG_ID);
     const todays = scoped.filter((e) => {
       const ts = Date.parse(e.createdAt || e.startedAt || "");
       return Number.isFinite(ts) && ts >= today;
@@ -92,11 +101,25 @@ module.exports = async function handler(req, res) {
       updated: todays.filter((e) => statusOf(e) === "updated").length,
       skipped: todays.filter((e) => statusOf(e) === "skipped").length,
     };
-    activity = scoped.slice(0, 5).map((e) => ({
-      status: statusOf(e) || String(e.status || "").toLowerCase(),
-      workflow: e.workflowName || e.workflowSlug || "Sync",
-      at: e.completedAt || e.createdAt || e.startedAt || null,
-    }));
+    activity = scoped
+      .slice()
+      .sort((a, b) => Date.parse(b.createdAt || b.startedAt || 0) - Date.parse(a.createdAt || a.startedAt || 0))
+      .slice(0, 5)
+      .map((e) => {
+        const rec = (e.input && e.input.record) || {};
+        return {
+          status: statusOf(e) || String(e.status || "").toLowerCase(),
+          workflow: e.workflowName || e.workflowSlug || "Sync",
+          contact: rec.Name || null,
+          at: e.completedAt || e.createdAt || e.startedAt || null,
+        };
+      });
+    diagnostics = {
+      executionsFetched: all.length,
+      executionsMatched: scoped.length,
+      executionOrgs: [...new Set(all.map((e) => e.endOrgId).filter(Boolean))],
+      connectionsFetched: allConnections.length,
+    };
   }
 
   return json(res, 200, {
@@ -106,5 +129,6 @@ module.exports = async function handler(req, res) {
     connectors,
     kpis,
     activity,
+    diagnostics,
   });
 };
